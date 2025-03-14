@@ -58,5 +58,19 @@ public class ClienteController {
                         .body(clie));
     }
 
+    @PostMapping("/upload/{clienteId}")
+    public Mono<ResponseEntity<Cliente>> subirFoto(@PathVariable String clienteId, @RequestPart FilePart file) {
+        return service.findById(clienteId).flatMap(c -> {
+            // generar nombre único para la foto
+            c.setFoto(UUID.randomUUID().toString() + "-" + file.filename().replace(" ", "")
+                    .replace(":", "")
+                    .replace("/", ""));
+
+            // guarda la imagen en el sistema de archivos
+            return file.transferTo(new File(path + c.getFoto()))
+                    .then(service.save(c)); // actualiza el cliente con la foto en la BD
+        }).map(clie -> ResponseEntity.ok(clie)) // si todo ok 200
+                .defaultIfEmpty(ResponseEntity.notFound().build()); // si no con eror 404
+    }
 
 }
