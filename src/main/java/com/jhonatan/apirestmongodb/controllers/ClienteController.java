@@ -1,7 +1,6 @@
 package com.jhonatan.apirestmongodb.controllers;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.UUID;
 
@@ -15,30 +14,25 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.jhonatan.apirestmongodb.documents.Cliente;
-import com.jhonatan.apirestmongodb.repository.ClienteRepository;
 import com.jhonatan.apirestmongodb.services.serviceImple.ClienteServiceImpl;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequestMapping("/api/clientes")
 public class ClienteController {
-
-    private final ClienteRepository clienteRepository;
 
     @Autowired
     private ClienteServiceImpl service;
 
     @Value("${config.uploads.path}")
     private String path;
-
-    ClienteController(ClienteRepository clienteRepository) {
-        this.clienteRepository = clienteRepository;
-    }
 
     @PostMapping("/saveClienteWithPhoto")
     public Mono<ResponseEntity<Cliente>> saveClientePhoto(@RequestBody Cliente cliente,
@@ -71,6 +65,16 @@ public class ClienteController {
                     .then(service.save(c)); // actualiza el cliente con la foto en la BD
         }).map(clie -> ResponseEntity.ok(clie)) // si todo ok 200
                 .defaultIfEmpty(ResponseEntity.notFound().build()); // si no con eror 404
+    }
+
+    @GetMapping("/findAllClients")
+    public Mono<ResponseEntity<Flux<Cliente>>> listarClientes() {
+
+        // duelve en una sola respuesta todos los clientes
+        return Mono.just(
+                ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(service.findAll()));
     }
 
 }
