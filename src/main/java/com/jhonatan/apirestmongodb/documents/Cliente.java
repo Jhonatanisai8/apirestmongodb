@@ -1,4 +1,4 @@
-package com.jhonatan.documents;
+package com.jhonatan.apirestmongodb.documents;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
