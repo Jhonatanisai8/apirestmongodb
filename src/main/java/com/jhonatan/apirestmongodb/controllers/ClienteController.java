@@ -77,4 +77,14 @@ public class ClienteController {
                         .body(service.findAll()));
     }
 
+    @GetMapping("/findClientById/{clienteId}")
+    public Mono<ResponseEntity<Cliente>> listarClientePorId(@PathVariable String clienteId) {
+        // devuelve un solo cliente en la respuesta
+        return service.findById(clienteId) /* Transforma el Mono<Cliente> en un Mono<ResponseEntity<Cliente>> */
+                .map(c -> ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(c))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
 }
