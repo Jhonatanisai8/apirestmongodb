@@ -2,20 +2,26 @@ package com.jhonatan.apirestmongodb.controllers;
 
 import java.io.File;
 import java.net.URI;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.support.WebExchangeBindException;
 
 import com.jhonatan.apirestmongodb.documents.Cliente;
 import com.jhonatan.apirestmongodb.services.serviceImple.ClienteServiceImpl;
 
+import jakarta.validation.Valid;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -85,6 +91,36 @@ public class ClienteController {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(c))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/saveClient")
+    public Mono<ResponseEntity<Map<String, Object>>> saveClient(@Valid @RequestBody Mono<Cliente> monoCliente) {
+        Map<String, Object> response = new HashMap<String, Object>();
+        return monoCliente.flatMap(cliente -> {
+
+            // Guarda el cliente en la base de datos y devuelve una respuesta exitosa
+            return service.save(cliente).map(t -> {
+                response.put("cliente", t);
+                response.put("mensaje", "Cliente creado con éxito");
+                response.put("timestamp", new Date());
+
+                return ResponseEntity.created(URI.create("api/clientes/".concat(t.getClienteId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(response);
+            });
+        }).onErrorResume(t -> { // Si hay errores de validación (400 Bad Request)
+            return Mono.just(t).cast(WebExchangeBindException.class)
+                    .flatMap(e -> Mono.just(e.getFieldErrors()))
+                    .flatMapMany(Flux::fromIterable)
+                    .map(error -> "El campo: " + error.getField() + " " + error.getDefaultMessage())
+                    .collectList()
+                    .flatMap(list -> {
+                        response.put("errors", list);
+                        response.put("timestamp", new Date());
+                        response.put("status", HttpStatus.BAD_REQUEST.value());
+                        return Mono.just(ResponseEntity.badRequest().body(response));
+                    });
+        });
     }
 
 }
